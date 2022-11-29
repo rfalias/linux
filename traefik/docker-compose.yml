@@ -1,0 +1,33 @@
+services:
+  traefik:
+    image: traefik:v2.1
+    command:
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker=true
+      - --providers.file.directory=/etc/traefik/dynamic_conf
+      - --providers.file.watch=true
+      - --api.insecure=true
+      - --api.dashboard=true
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/traefik/certs/:/certs/:ro
+      - /etc/traefik/traefik.yml:/etc/traefik/dynamic_conf/conf.yml:ro
+
+  web:
+    image: nginx:1.17.8-alpine
+    labels:
+      # http with redirection
+      - traefik.http.middlewares.redirect-middleware.redirectscheme.scheme=https
+      - traefik.http.routers.web-router.entrypoints=web
+      - traefik.http.routers.web-router.rule=Host(`web.crowflock.com`)
+      - traefik.http.routers.web-router.middlewares=redirect-middleware
+      # https
+      - traefik.http.routers.websecure-router.entrypoints=websecure
+      - traefik.http.routers.websecure-router.tls=true
+      - traefik.http.routers.websecure-router.rule=Host(`web.crowflock.com`)
+
